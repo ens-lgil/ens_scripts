@@ -40,7 +40,7 @@ foreach my $file (@files) {
   if (-e "$old_omia/$file") {
   
     my $new_size = -s "$new_omia/$file";
-    my $old_size = -s "$new_omia/$file";
+    my $old_size = -s "$old_omia/$file";
     
     push(@{$results{$species}}, 'diff size') if ($new_size != $old_size);
     
@@ -57,7 +57,7 @@ foreach my $file (@files) {
 
 
 foreach my $species (sort(keys(%results))) {
-  my $result = join(',',@{$results{$species}});
+  my $result = join(', ',@{$results{$species}});
   
   if ($result && $result ne '') {
     print "$species: $result\n";
