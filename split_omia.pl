@@ -25,6 +25,7 @@ my %species = (
   9913  => 'cow',
   9615  => 'dog',
   61853 => 'gibbon',
+  9925  => 'goat',
   9796  => 'horse',
   9544  => 'macaque',
   10090 => 'mouse',
