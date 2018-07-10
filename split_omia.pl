@@ -76,6 +76,7 @@ foreach my $taxo_id (sort(keys(%data))) {
 
   $id = lc($id);
   $id =~ s/ /_/g;
+  $id =~ s/'//g;
   $id =~ s/^domestic_//g;
 
   open OUT, "> $path/$prefix$id$suffix" or die $!;
