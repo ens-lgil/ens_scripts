@@ -15,6 +15,8 @@
     <script type="text/javascript" src="Chart.bundle.min.js"></script>
 
     <script>
+      var months_num_to_string = { "01" : "Jan", "02" : "Feb", "03" : "Mar", "04" : "Apr", "05" : "May", "06" : "Jun", 
+                                   "07" : "Jul", "08" : "Aug", "09" : "Sep", "10" : "Oct", "11" : "Nov", "12" : "Dec" };
       var url_root  = 'https://hub.docker.com/v2/repositories';
       $(document).ready(function () {
         var projects = ['ensemblorg', 'willmclaren'];
@@ -38,21 +40,22 @@
           console.log('thrownError: ' + thrownError + "\n");
         })
         .then(function(data) {
-          var data_array = data.split('\n');
-          var index = data_array.length-1;
-          var entry = data_array[index];
+          var data_array  = data.split('\n');
+          var index_array = data_array.length-1;
+          var entry = data_array[index_array];
 
           if (entry == '') {
-            index = index - 1;
-            entry = data_array[index];
+            index_array = index_array - 1;
+            entry = data_array[index_array];
           }
           if (entry == '') {
-            index = index - 1;
-            entry = data_array[index];
+            index_array = index_array - 1;
+            entry = data_array[index_array];
           }
           if (entry != '') {
             var [count_0,date_0] = entry.split('\t');
-            
+            var [date_0,time_0] = date_0.split(' ');
+
             if (type == 'old') {
               var live_count = $('#'+div+'_live_count').attr('data-value');
 
@@ -61,18 +64,21 @@
 
               var div_prefix = '#'+div+'_morning';
               $(div_prefix).show();
-              $(div_prefix+'_date').html(date_0); 
+              $(div_prefix+'_date').html(date_0);
+              $(div_prefix+'_time').html(time_0);
               $(div_prefix+'_count_diff').html('+'+formatNumber(diff_0))
 
               // Yesterday count
               if (data_array.length >= 1) {
-                var yesterday_entry = data_array[index-1];
+                var yesterday_entry = data_array[index_array-1];
                 if (yesterday_entry) {
                   var [count_1,date_1] = yesterday_entry.split('\t');
                   var diff_1 = count_0 - count_1;
+                  var [date_1,time_1] = date_1.split(' ');
                   var div_prefix = '#'+div+'_yesterday';
                   $(div_prefix).show();
                   $(div_prefix+'_date').html(date_1);
+                  $(div_prefix+'_time').html(time_1);
                   if (diff_1 < 0) {
                     $(div_prefix+'_count_diff').html(0);
                   }
@@ -83,19 +89,21 @@
               }
               
               // Last week count
-              if (data_array.length >= 7) {
-                var week_entry = data_array[index-7];
+              if (data_array.length > 7) {
+                var week_entry = data_array[index_array-7];
                 var [count_7,date_7] = week_entry.split('\t');
                 var diff_7 = count_0 - count_7;
+                var [date_7,time_7] = date_7.split(' ');
                 var div_prefix = '#'+div+'_week';
                 $(div_prefix).show();
                 $(div_prefix+'_date').html(date_7);
+                $(div_prefix+'_time').html(time_7);
                 $(div_prefix+'_count_diff').html('+'+formatNumber(diff_7));
                 $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_7/7)+"</b>");
                 
                 // Week before count
-                if (data_array.length >= 14) {
-                  var week2_entry = data_array[index-14];
+                if (data_array.length > 14 && data_array[index_array-14]) {
+                  var week2_entry = data_array[index_array-14];
                   var [count_14,date_14] = week2_entry.split('\t');
                   var diff_14 = count_7 - count_14;
                   var weeks_diff = diff_7 - diff_14;
@@ -113,15 +121,35 @@
               }
               
               // Last month count
-              if (data_array.length >= 30) {
-                var month_entry = data_array[index-30];
+              if (data_array.length > 30 && data_array[index_array-30]) {
+                var month_entry = data_array[index_array-30];
                 var [count_30,date_30] = month_entry.split('\t');
                 var diff_30 = count_0 - count_30;
+                var [date_30,time_30] = date_30.split(' ');
                 var div_prefix = '#'+div+'_month';
                 $(div_prefix).show(); 
                 $(div_prefix+'_date').html(date_30);
+                $(div_prefix+'_time').html(time_30);
                 $(div_prefix+'_count_diff').html('+'+formatNumber(diff_30));
-                $(div_prefix+'_count_diff_avg').html('Average: <b>'+formatNumber(diff_30/30)+"</b> per day");
+                $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_30/30)+"</b>");
+                
+                // Week before count
+                if (data_array.length > 60 && data_array[index_array-60]) {
+                  var month2_entry = data_array[index_array-60];
+                  var [count_60,date_60] = month2_entry.split('\t');
+                  var diff_60 = count_30 - count_60;
+                  var months_diff = diff_30 - diff_60;
+                  var arrow = '<span>=</span>';
+                  var operator = '';
+                  if (weeks_diff > 0) {
+                    arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
+                    operator = '+';
+                  }
+                  else if (weeks_diff < 0) {
+                    arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
+                  }
+                  $(div_prefix+'_count_diff_prev').html('Count versus previous month: '+arrow+' ('+operator+formatNumber(months_diff)+')');
+                }
               }
               
               // Charts
@@ -129,8 +157,18 @@
                 var prev_count;
                 var prev_date;
                 var data_list = [];
-                var dates = []
-                $.each(data_array, function(index,data) {
+                var dates = [];
+                var chart_data_array = data_array.slice(0,index_array+1);
+                
+                // Chart 1 - line                
+                var data_subarray = chart_data_array;
+                var data_length = chart_data_array.length;
+                if (data_length > 30) {
+                  var data_first_index = data_length-1-30;
+                  data_subarray = chart_data_array.slice(data_first_index,data_length);
+                }
+                // Build the dataset
+                $.each(data_subarray, function(index,data) {
                   if (data != '') {
                     var [count,date_time] = data.split('\t');
                     var count_diff = 0;
@@ -148,17 +186,44 @@
                     prev_date = date;
                   }
                 });
-                
+
                 // Today
                 dates.push(prev_date);
                 data_list.push(diff_0);
-                
-                drawChart(data_list,dates);
-              }
+                drawChart1(data_list,dates);
+
               
+                // Chart 2 - bar
+                var months_list = [];
+                var count_by_months = [];
+                var prev_count2;
+                var prev_month2;
+                var current_count2;
+                $.each(chart_data_array, function(index,data) {
+                  var [count,date_time] = data.split('\t');
+                  var [date,time] = date_time.split(' ');
+                  var [day,month,year] = date.split('-');
+                  current_count2 = count;
+                  
+                  if (day == "01") {
+                    if (prev_count2) {
+                      count_diff = count - prev_count2;
+                      months_list.push(prev_month2);
+                      count_by_months.push(count_diff);
+                    }
+                    var my_date = months_num_to_string[month]+" "+year;
+                    prev_month2 = my_date;
+                    prev_count2 = count;
+                  }
+                });
+                months_list.push(prev_month2);
+                count_by_months.push(current_count2-prev_count2);
+                drawChart2(count_by_months,months_list);
+              }  
             }
             else {
               $('#'+div+'_date').html(date_0);
+              $('#'+div+'_time').html(time_0);
               $('#'+div+'_count').html(formatNumber(count_0)+" <small>pulls</small>");
               $('#'+div+'_count').attr('data-value', count_0);
             }
@@ -166,8 +231,8 @@
         });
         
         
-        function drawChart(data, labels) {
-          var ctx = document.getElementById('myChart').getContext('2d');
+        function drawChart1(data, labels) {
+          var ctx = document.getElementById('myChart1').getContext('2d');
           
           // Colour last entry differently
           var pointBackgroundColors = [];
@@ -184,7 +249,7 @@
             data: {
               datasets: [{
                   data: data,
-                  label: "ensemblorg/ensembl-vep Docker pulls per day",
+                  label: "ensemblorg/ensembl-vep Docker pulls per day (last "+(data.length-1)+" days)",
                   borderColor: "#3e95cd",
                   pointBackgroundColor: pointBackgroundColors,
                   fill: false
@@ -197,6 +262,28 @@
           });
         }
         
+        function drawChart2(data, labels) {
+          var ctx = document.getElementById('myChart2').getContext('2d');
+          
+          var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              datasets: [{
+                  data: data,
+                  label: "ensemblorg/ensembl-vep Docker pulls per month",
+                  backgroundColor: "#3e95cd"
+              }],
+              labels: labels
+            },
+            options: {
+                scales: {
+                    yAxes: [{
+                        ticks: { beginAtZero: true }
+                    }]
+                }
+            }
+          });
+        }
         
         function formatNumber(num) {
           num = Math.round(num);
@@ -205,13 +292,22 @@
       }
     </script>
     <style>
-      .count_live      { float:left;padding:5px 10px;border:2px #11F solid;border-radius:8px;font-size:20px;margin-right:15px; }
+      .repo            { float:left;padding-right:50px;border-right:1px solid #EEE; }
+      .count_live      { float:left;padding:4px 10px;border:2px #11F solid;border-radius:8px;font-size:20px;margin-right:15px; }
       .ens_title       { border-left:12px #3e95cd solid; padding-left:10px; margin-bottom:10px; }
       .will_title      { border-left:12px #000000 solid; padding-left:10px; margin-bottom:10px; }
-      .count_diff      { float:left;padding:5px 10px;border:2px #0A0 solid;border-radius:8px;font-size:20px;background-color:#FFF; }
-      .count_container { background-color:#F5F5F5;padding:4px 8px 6px;border-radius:8px;margin-bottom:20px;display:none; } 
+      .count_diff      { float:left;padding:4px 10px;border:2px #0A0 solid;border-radius:8px;font-size:20px;background-color:#FFF; }
+      .count_container { background-color:#F5F5F5;padding:1px 8px 6px;border-radius:8px;margin-bottom:20px;display:none; } 
       .count_diff_data { float:right; }
+      .count_point     { float:right;border-radius:8px;margin-top:30px;padding:3px;vertical-align:middle; }
       .arrow           { font-size:16px;font-weight: bold; }
+      .date_label      { float:right;margin-left:10px; }
+      .time_label      { float:right;}
+      .at_label        { float:right;padding:0px 5px;font-size:14px;}
+      .last_count_details { float:left;height:42px; }
+      .last_count_details > div { float:left;line-height:42px;vertical-align:middle; }
+      .last_count_label { line-height:42px;vertical-align:middle; }
+      .last_count_at   { padding:0px 5px; }
     </style>
   </head>
   
@@ -219,37 +315,64 @@
     <div>
     
       <!-- ensemblorg -->
-      <div id="ensembl" style="float:left;padding-right:50px;border-right:1px solid #EEE">
+      <div id="ensembl" class="repo" style="margin-right:50px">
         <h3 class="ens_title">ensemblorg/ensembl-vep</h3>
         <div>
           <div id="ens_live_count" class="count_live"></div>
-          <div style="float:left;margin:0px 10px;line-height:42px">Last count: </div>
-          <div id="ens_live_date" style="float:left;line-height:42px"></div>
+          <div class="last_count_details">
+            <div style="margin:0px 10px">Last count: </div>
+            <div>
+              <div id="ens_live_date" class="label label-default last_count_label" title="date"></div>
+            </div>
+            <div class="last_count_at">at</div>
+            <div>
+              <div id="ens_live_time" class="label label-primary last_count_label" title="time"></div>
+            </div>
+            <div style="clear:both"></div>
+          </div>
           <div style="clear:both"></div>
         </div>
         
         <hr />
         
         <div class="count_container" id="ens_morning">
-          <h4>Since this morning - count pulls (<span id="ens_morning_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Since this morning - count pulls</div>
+            <span class="label label-default time_label" id="ens_morning_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="ens_morning_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="ens_morning_count_diff" class="count_diff"></div>
-            <div style="float:right;border:1px #3e95cd solid;background-color:#F00;border-radius:8px;margin-top:35px;padding:3px;vertical-align:middle" title="Last point of the chart"></div>
+            <div  class="count_point" style="border:1px #3e95cd solid;background-color:#F00" title="Last point of the chart"></div>
             <div style="clear:both"></div>
           </div>
         </div>
         
         <div class="count_container" id="ens_yesterday">
-          <h4>Yesterday - count pulls (<span id="ens_yesterday_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Yesterday - count pulls</div>
+            <span class="label label-default time_label" id="ens_yesterday_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="ens_yesterday_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="ens_yesterday_count_diff" class="count_diff"></div>
-            <div style="float:right;border:1px #3e95cd solid;background-color:#0A0;border-radius:8px;margin-top:35px;padding:3px;vertical-align:middle" title="Yesterday point of the chart"></div>
+            <div class="count_point" style="border:1px #3e95cd solid;background-color:#0A0" title="Yesterday point of the chart"></div>
             <div style="clear:both"></div>
           </div>
         </div>
         
         <div class="count_container" id="ens_week">
-          <h4>Last 7 days - count pulls (<span id="ens_week_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Last 7 days - count pulls</div>
+            <span class="label label-default time_label" id="ens_week_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="ens_week_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="ens_week_count_diff" class="count_diff"></div>
             <div class="count_diff_data">
@@ -261,10 +384,19 @@
         </div>
         
         <div class="count_container" id="ens_month">
-          <h4>Last 30 day - pulls (<span id="ens_month_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Last 30 day - pulls</div>
+            <span class="label label-default time_label" id="ens_month_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="ens_month_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="ens_month_count_diff" class="count_diff"></div>
-            <div id="ens_month_count_diff_avg" class="count_diff_avg"></div>
+            <div class="count_diff_data">
+              <div id="ens_month_count_diff_avg"></div>
+              <div id="ens_month_count_diff_prev"></div>
+            </div>
             <div style="clear:both"></div>
           </div>
         </div>
@@ -273,19 +405,34 @@
       
       
       <!-- willmclaren -->
-      <div id="will" style="float:left;padding-left:50px">
+      <div id="will" class="repo">
         <h3 class="will_title">willmclaren/ensembl-vep</h3>
         <div>
           <div id="will_live_count" class="count_live"></div>
-          <div style="float:left;margin:0px 10px;line-height:42px">Last count: </div>
-          <div id="will_live_date" style="float:left;line-height:42px"></div>
+          <div class="last_count_details">
+            <div style="margin:0px 10px">Last count: </div>
+            <div>
+              <div id="will_live_date" class="label label-default last_count_label" title="date"></div>
+            </div>
+            <div class="last_count_at">at</div>
+            <div>
+              <div id="will_live_time" class="label label-primary last_count_label" title="time"></div>
+            </div>
+            <div style="clear:both"></div>
+          </div>
           <div style="clear:both"></div>
         </div>
         
         <hr />
         
         <div class="count_container" id="will_morning">
-          <h4>Since this morning - count pulls (<span id="will_morning_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Since this morning - count pulls</div>
+            <span class="label label-default time_label" id="will_morning_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="will_morning_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="will_morning_count_diff" class="count_diff"></div>
             <div style="clear:both"></div>
@@ -293,7 +440,13 @@
         </div>
         
         <div class="count_container" id="will_yesterday">
-          <h4>Yesterday - count pulls (<span id="will_yesterday_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Yesterday - count pulls</div>
+            <span class="label label-default time_label" id="will_yesterday_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="will_yesterday_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="will_yesterday_count_diff" class="count_diff"></div>
             <div style="clear:both"></div>
@@ -301,7 +454,13 @@
         </div>
         
         <div class="count_container" id="will_week">
-          <h4>Last 7 days - count pulls (<span id="will_week_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Last 7 days - count pulls</div>
+            <span class="label label-default time_label" id="will_week_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="will_week_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="will_week_count_diff" class="count_diff"></div>
             <div class="count_diff_data">
@@ -314,10 +473,19 @@
         </div>
         
         <div class="count_container" id="will_month">
-          <h4>Last 30 day - count pulls (<span id="will_month_date"></span>)</h4>
+          <h4>
+            <div style="float:left">Last 30 day - count pulls</div>
+            <span class="label label-default time_label" id="will_month_time" title="time"></span>
+            <span class="at_label">at</span>
+            <span class="label label-default date_label" id="will_month_date" title="date"></span>
+            <div style="clear:both"></div>
+          </h4>
           <div>
             <div id="will_month_count_diff" class="count_diff"></div>
-            <div id="will_month_count_diff_avg" class="count_diff_avg"></div>
+            <div class="count_diff_data">
+              <div id="will_month_count_diff_avg"></div>
+              <div id="will_month_count_diff_prev"></div>
+            </div>
             <div style="clear:both"></div>
           </div>
         </div>
@@ -327,8 +495,14 @@
       <div style="clear:both"></div>
     </div>
     
-    <div style="width: 900px;height:400px;margin-top:20px">
-      <canvas id="myChart"></canvas>
+    <div style="margin-top:20px">
+      <div style="float:left;width: 900px;height:400px;margin-right:50px">
+        <canvas id="myChart1"></canvas>
+      </div>
+      <div style="float:left;width: 600px;height:300px;margin-top:100px">
+        <canvas id="myChart2"></canvas>
+      </div>
+      <div style="clear:both"></div>
     </div>
     
   </body>
