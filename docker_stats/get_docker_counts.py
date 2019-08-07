@@ -1,11 +1,15 @@
-import sys, os, datetime, shutil
-sys.path.append('/homes/lgil/.local/')
+import sys, os, getopt,datetime, shutil
+# Get home directory
+homedir = os.path.expanduser("~")
+sys.path.append(homedir+'/.local/')
 import requests
 
+datafile_dir = ""
+tmp_dir = ""
 type = ""
-if len(sys.argv) > 1:
-    type = sys.argv[1]
+backup_dir = "/nfs/panda/ensembl/variation/data/docker_stats/"
 
+# Get the pulls count
 def get_count(url):
     r = requests.get(url, headers={ "Content-Type" : "application/json"})
 
@@ -16,19 +20,53 @@ def get_count(url):
     decoded = r.json()
     return decoded['pull_count'];
 
+# Fetch and parse the parameters
+def get_parameters(argv):
+    msg = 'get_docker_counts.py -d <data_dir> -t <tmp_dir> -y <type>'
+    global datafile_dir, tmp_dir, type
 
-# MAIN
-datafile_dir = "/homes/lgil/public_html/ensembl/docker"
-save_dir = "/homes/lgil/projets/Docker_count/"
-backup_dir = "/nfs/panda/ensembl/variation/data/docker_stats/"
+    # Parse options
+    try:
+        opts, args = getopt.getopt(argv,"d:t:y:",["datadir=","tmpdir=","type="])
+    except getopt.GetoptError:
+        print (msg)
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-d", "--datadir"):
+           datafile_dir = arg
+        elif opt in ("-t", "--tmpdir"):
+           tmp_dir = arg
+        elif opt in ("-y", "--type"):
+           type = arg
+
+    # Handling missing options
+    error_msg = ''
+    if (datafile_dir==''):
+        error_msg += "ERROR: option '--datadir' (-d) is missing.\n"
+    if (tmp_dir==''):
+        error_msg += "ERROR: option '--tmpdir' (-t) is missing.\n"
+    if (type!='' and type!='live'):
+        error_msg += "ERROR: option '--type' (-y) only allows the value 'live'.\n"
+    if (error_msg!=''):
+        print(error_msg)
+        sys.exit(2)
+
+
+#------#
+# MAIN #
+#------#
+
+if len(sys.argv) > 1:
+  get_parameters(sys.argv[1:])
+
 
 repos = ["ensemblorg","willmclaren"]
 
 for repo in repos:
 
-  live_fname = save_dir+"/docker_"+repo+"_ensembl-vep_live.txt"
+  live_fname = tmp_dir+"/test_docker_"+repo+"_ensembl-vep_live.txt"
 
-  fname = save_dir+"/docker_"+repo+"_ensembl-vep.txt"
+  fname = tmp_dir+"/test_docker_"+repo+"_ensembl-vep.txt"
 
   server = "https://hub.docker.com/v2/repositories"
   ext = "/"+repo+"/ensembl-vep/"
