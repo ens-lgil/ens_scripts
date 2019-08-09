@@ -133,7 +133,7 @@
                 $(div_prefix+'_count_diff').html('+'+formatNumber(diff_30));
                 $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_30/30)+"</b>");
                 
-                // Week before count
+                // Month before count
                 if (data_array.length > 60 && data_array[index_array-60]) {
                   var month2_entry = data_array[index_array-60];
                   var [count_60,date_60] = month2_entry.split('\t');
@@ -141,11 +141,11 @@
                   var months_diff = diff_30 - diff_60;
                   var arrow = '<span>=</span>';
                   var operator = '';
-                  if (weeks_diff > 0) {
+                  if (months_diff > 0) {
                     arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
                     operator = '+';
                   }
-                  else if (weeks_diff < 0) {
+                  else if (months_diff < 0) {
                     arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
                   }
                   $(div_prefix+'_count_diff_prev').html('Count versus previous month: '+arrow+' ('+operator+formatNumber(months_diff)+')');
