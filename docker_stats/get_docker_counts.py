@@ -123,6 +123,7 @@ for repo in repos:
             shutil.copy2(bak_fname,tmp_dir)
         else:
             print("Can't find the backed up data file containing the daily pulls count! It should be in the '"+backup_dir+"' directory")
+            exit(2)
         
         # 2 - Update file in tmp directory
         record_file = open(tmp_fname, 'a')
