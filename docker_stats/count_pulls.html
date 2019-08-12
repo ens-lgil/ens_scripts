@@ -21,7 +21,6 @@
       $(document).ready(function () {
         var projects = ['ensemblorg', 'willmclaren'];
         var div_prefix = ['ens', 'will'];
-        var live_count = [];
         $.each(projects, function(index,project) {
           $.when(get_count('docker_'+project+'_ensembl-vep_live.txt',div_prefix[index]+'_live','live')).then(function() {
             get_count('docker_'+project+'_ensembl-vep.txt',div_prefix[index],'old');
@@ -66,7 +65,12 @@
               $(div_prefix).show();
               $(div_prefix+'_date').html(date_0);
               $(div_prefix+'_time').html(time_0);
-              $(div_prefix+'_count_diff').html('+'+formatNumber(diff_0))
+              if (diff_0 < 0) {
+                $(div_prefix+'_count_diff').html('ND');
+              }
+              else {
+                $(div_prefix+'_count_diff').html('+'+formatNumber(diff_0));
+              }
 
               // Yesterday count
               if (data_array.length >= 1) {
@@ -80,7 +84,7 @@
                   $(div_prefix+'_date').html(date_1);
                   $(div_prefix+'_time').html(time_1);
                   if (diff_1 < 0) {
-                    $(div_prefix+'_count_diff').html(0);
+                    $(div_prefix+'_count_diff').html('ND');
                   }
                   else {
                     $(div_prefix+'_count_diff').html('+'+formatNumber(diff_1));
@@ -98,25 +102,30 @@
                 $(div_prefix).show();
                 $(div_prefix+'_date').html(date_7);
                 $(div_prefix+'_time').html(time_7);
-                $(div_prefix+'_count_diff').html('+'+formatNumber(diff_7));
-                $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_7/7)+"</b>");
+                if (diff_7 < 0) {
+                  $(div_prefix+'_count_diff').html('ND');
+                }
+                else {
+                  $(div_prefix+'_count_diff').html('+'+formatNumber(diff_7));
+                  $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_7/7)+"</b>");
                 
-                // Week before count
-                if (data_array.length > 14 && data_array[index_array-14]) {
-                  var week2_entry = data_array[index_array-14];
-                  var [count_14,date_14] = week2_entry.split('\t');
-                  var diff_14 = count_7 - count_14;
-                  var weeks_diff = diff_7 - diff_14;
-                  var arrow = '<span>=</span>';
-                  var operator = '';
-                  if (weeks_diff > 0) {
-                    arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
-                    operator = '+';
+                  // Week before count
+                  if (data_array.length > 14 && data_array[index_array-14]) {
+                    var week2_entry = data_array[index_array-14];
+                    var [count_14,date_14] = week2_entry.split('\t');
+                    var diff_14 = count_7 - count_14;
+                    var weeks_diff = diff_7 - diff_14;
+                    var arrow = '<span>=</span>';
+                    var operator = '';
+                    if (weeks_diff > 0) {
+                      arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
+                      operator = '+';
+                    }
+                    else if (weeks_diff < 0) {
+                      arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
+                    }
+                    $(div_prefix+'_count_diff_prev').html('Count versus previous 7 days: '+arrow+' ('+operator+formatNumber(weeks_diff)+')');
                   }
-                  else if (weeks_diff < 0) {
-                    arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
-                  }
-                  $(div_prefix+'_count_diff_prev').html('Count versus previous 7 days: '+arrow+' ('+operator+formatNumber(weeks_diff)+')');
                 }
               }
               
@@ -130,25 +139,30 @@
                 $(div_prefix).show(); 
                 $(div_prefix+'_date').html(date_30);
                 $(div_prefix+'_time').html(time_30);
-                $(div_prefix+'_count_diff').html('+'+formatNumber(diff_30));
-                $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_30/30)+"</b>");
-                
-                // Month before count
-                if (data_array.length > 60 && data_array[index_array-60]) {
-                  var month2_entry = data_array[index_array-60];
-                  var [count_60,date_60] = month2_entry.split('\t');
-                  var diff_60 = count_30 - count_60;
-                  var months_diff = diff_30 - diff_60;
-                  var arrow = '<span>=</span>';
-                  var operator = '';
-                  if (months_diff > 0) {
-                    arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
-                    operator = '+';
+                if (diff_30 < 0) {
+                  $(div_prefix+'_count_diff').html('ND');
+                }
+                else {
+                  $(div_prefix+'_count_diff').html('+'+formatNumber(diff_30));
+                  $(div_prefix+'_count_diff_avg').html('Average pulls per day: <b>'+formatNumber(diff_30/30)+"</b>");
+
+                  // Month before count
+                  if (data_array.length > 60 && data_array[index_array-60]) {
+                    var month2_entry = data_array[index_array-60];
+                    var [count_60,date_60] = month2_entry.split('\t');
+                    var diff_60 = count_30 - count_60;
+                    var months_diff = diff_30 - diff_60;
+                    var arrow = '<span>=</span>';
+                    var operator = '';
+                    if (months_diff > 0) {
+                      arrow = '<span class="arrow" style="color:#0B0">&uarr;</span>';
+                      operator = '+';
+                    }
+                    else if (months_diff < 0) {
+                      arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
+                    }
+                    $(div_prefix+'_count_diff_prev').html('Count versus previous month: '+arrow+' ('+operator+formatNumber(months_diff)+')');
                   }
-                  else if (months_diff < 0) {
-                    arrow = '<span class="arrow" style="color:#B00">&darr;</span>';
-                  }
-                  $(div_prefix+'_count_diff_prev').html('Count versus previous month: '+arrow+' ('+operator+formatNumber(months_diff)+')');
                 }
               }
               
@@ -233,15 +247,24 @@
         
         function drawChart1(data, labels) {
           var ctx = document.getElementById('myChart1').getContext('2d');
+
+          last_index = data.length - 1;
+          yesterday_index = data.length - 2;
+
+          // Check if last data is > 0
+          if (data[last_index] < 0) {
+            data.pop();
+            labels.pop();
+          }
           
-          // Colour last entry differently
+          // Colour last entries differently
           var pointBackgroundColors = [];
           for (i = 0; i < data.length; i++) {
             pointBackgroundColors.push("");
           }
-          last_index = data.length - 1;
-          pointBackgroundColors[last_index]= "#F00";
-          yesterday_index = data.length - 2;
+          if (data[last_index] || data[last_index] == 0) {
+            pointBackgroundColors[last_index]= "#F00";
+          }
           pointBackgroundColors[yesterday_index]= "#0A0";
           
           var myChart = new Chart(ctx, {
