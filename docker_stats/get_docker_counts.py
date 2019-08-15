@@ -15,7 +15,7 @@
    limitations under the License.
 """
 
-import sys, os, getopt,datetime, shutil
+import sys, os, stat, getopt,datetime, shutil
 # Get home directory
 homedir = os.path.expanduser("~")
 sys.path.append(homedir+'/.local/')
@@ -129,6 +129,12 @@ for repo in repos:
         record_file = open(tmp_fname, 'a')
         record_file.write(line)
         record_file.close()
+        # Change read/write file access
+        os.chmod(tmp_fname, stat.S_IRUSR |
+                            stat.S_IWUSR |
+                            stat.S_IRGRP |
+                            stat.S_IWGRP |
+                            stat.S_IROTH)
         
         # 3 - Copy file to backup and web directories
         if (os.path.isfile(tmp_fname)):
