@@ -42,9 +42,11 @@ def parse_vcf (input_file):
                 input_list = []
                 count_variants = 0
                 rest_calls = rest_calls+1
+            # Parse the VCF line
             line_content = line.strip()
             line_parts = line_content.split("\t")
             line_vcf = ''
+            # Rebuild the VCF input with only the useful columns and a space as separator
             for col in range(5):
                 line_vcf = (line_vcf == '') and line_parts[col] or line_vcf+" "+line_parts[col]
             input_list.append(line_vcf)
