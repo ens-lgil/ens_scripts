@@ -1,0 +1,121 @@
+<html>
+  <head>
+    <title>Count Docker pulls</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap-theme.min.css"/>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css"/>
+    <!-- Download CSS file from https://cdnjs.com/libraries/Chart.js, e.g. https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js -->
+    
+    <link rel="stylesheet" href="Chart.min.css"/>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <!-- Download JS file from https://cdnjs.com/libraries/Chart.js, e.g. https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js -->
+    <script type="text/javascript" src="Chart.bundle.min.js"></script>
+
+    <script>
+      fetch_count("var_count.json");
+    
+      function fetch_count(fname) {
+        return $.ajax({
+          url:'./'+fname,
+          dataType: "json"
+        })
+        .error(function (xhRequest, ErrorText, thrownError) {
+          console.log('xhRequest: ' + xhRequest + "\n");
+          console.log('ErrorText: ' + ErrorText + "\n");
+          console.log('thrownError: ' + thrownError + "\n");
+        })
+        .then(function(data) {
+           console.log(data);
+
+          var releases = [];
+          for (var i = data.release_start; i <= data.release_end; i++) {
+            releases.push(i);
+          }
+          console.log(releases);
+          drawChart(data.counts, releases, 'myChart1', 1);
+          drawChart(data.counts, releases, 'myChart2');
+        });
+      }
+      
+      function drawChart(data, labels, div_id, only_human) {
+        var ctx = document.getElementById(div_id).getContext('2d');
+        var chart_datasets = [];
+        $.each(data, function(index,spe_data) {
+          var label = spe_data.spe;
+          if ((only_human && label!='Homo sapiens') || !only_human && label=='Homo sapiens') {
+            return;
+          }
+          var borderColor = spe_data.color;
+          var pointBackgroundColor = spe_data.color;
+          var dataset = {
+            data: spe_data.var_counts,
+            label: label,
+            borderColor: borderColor,
+            pointBackgroundColor: pointBackgroundColor,
+            fill: false
+          };
+            chart_datasets.push(dataset);
+        });
+          
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: chart_datasets,
+            labels: labels
+          },
+          options: {
+            fill: false
+          }
+        });
+        
+        $("#toggle_"+div_id).click(function() {
+	        myChart.data.datasets.forEach(function(ds) {
+            ds.hidden = !ds.hidden;
+          });
+          myChart.update();
+        });
+      }
+     
+    </script>
+    <style>
+      .repo            { float:left;padding-right:50px;border-right:1px solid #EEE; }
+      .count_live      { float:left;padding:4px 10px;border:2px #11F solid;border-radius:8px;font-size:20px;margin-right:15px; }
+      .ens_title       { border-left:12px #3e95cd solid; padding-left:10px; margin-bottom:10px; }
+      .will_title      { border-left:12px #000000 solid; padding-left:10px; margin-bottom:10px; }
+      .count_diff      { float:left;padding:4px 10px;border:2px #0A0 solid;border-radius:8px;font-size:20px;background-color:#FFF; }
+      .count_container { background-color:#F5F5F5;padding:1px 8px 6px;border-radius:8px;margin-bottom:20px;display:none; } 
+      .count_diff_data { float:right; }
+      .count_point     { float:right;border-radius:8px;margin-top:30px;padding:3px;vertical-align:middle; }
+      .arrow           { font-size:16px;font-weight: bold; }
+      .date_label      { float:right;margin-left:10px; }
+      .time_label      { float:right;}
+      .at_label        { float:right;padding:0px 5px;font-size:14px;}
+      .last_count_details { float:left;height:42px; }
+      .last_count_details > div { float:left;line-height:42px;vertical-align:middle; }
+      .last_count_label { line-height:42px;vertical-align:middle; }
+      .last_count_at   { padding:0px 5px; }
+    </style>
+  </head>
+  
+  <body style="padding:15px 25px">
+    <div style="max-width:900px">
+      <h2 style="float:left">Human only</h2>
+      <button type="button" style="float:right;margin-bottom:8px" id="toggle_myChart1" class="btn btn-sm btn-outline-primary">show/hide all</button>
+      <div style="clear:both"></div>
+    </div>
+    <div style="width:900px;max-height:450px;margin-bottom:15px">
+      <canvas id="myChart1"></canvas>
+    </div>
+    <div style="margin-top:100px;max-width:900px">
+      <h2 style="float:left">Other species</h2>
+      <button type="button" style="float:right;margin-bottom:8px" id="toggle_myChart2" class="btn btn-sm btn-outline-primary">show/hide all</button>
+      <div style="clear:both"></div>
+    </div>
+    <div style="width: 900px;height:450px">
+      <canvas id="myChart2"></canvas>
+    </div>
+  </body>
+</html>

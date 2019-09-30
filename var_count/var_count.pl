@@ -35,7 +35,7 @@ use Getopt::Long;
 ###############
 ### Options ###
 ###############
-my ($oldest_version,$newest_version,$html_file,$source_id,$source,$hosts,$logins,$type,$help);
+my ($oldest_version,$newest_version,$json_file,$source_id,$source,$hosts,$logins,$type,$help);
 ## EG options
 my ($site, $etype);
 
@@ -45,12 +45,11 @@ use JSON qw(to_json);
 GetOptions(
      'oldest_v=i' => \$oldest_version,
      'newest_v=i' => \$newest_version,
-     'o=s'        => \$html_file,
+     'o=s'        => \$json_file,
      'help!'      => \$help,
      'hosts=s'    => \$hosts,
      'logins=s'   => \$logins,
      'site=s'     => \$site,
-     'type=s'     => \$type,
      'etype=s'    => \$etype
 );
 
@@ -62,7 +61,7 @@ if (!$newest_version) {
   print "> Error! Please give the Ensembl newest version you want to retrieve, using the option '-newest_v' \n";
   usage();
 }
-if (!$html_file) {
+if (!$json_file) {
   print "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
@@ -71,7 +70,7 @@ if (!$hosts) {
   usage();
 }
 if (!$logins) {
-  print "> Error! Please give the list of logins of the databasesusing the option '-login'\n";
+  print "> Error! Please give the list of logins of the databases using the option '-login'\n";
   usage();
 }
 
@@ -81,20 +80,6 @@ my $server_name = 'http://static.ensembl.org';
 my $ecaption = 'Ensembl';
 my @hostnames  = split /,/, $hosts;
 my @loginnames = split /,/, $logins;
-
-my %chart_types = ( 'line'    => 'LineChartNVD3',
-                    'focus'   => 'LineFocusChartNVD3',
-                    'stacked' => 'StackedColumnChartNVD3'
-                  );
-                                    
-$type ||= 'line';
-
-my $chart_type = $chart_types{$type};
-if (!$chart_type) {
- print "> Error! Chart type '$type' not found in the list of allowed charts!\n";
- usage();
-}
-
 
 if ($site) {
   $server_name = $site;
@@ -139,42 +124,12 @@ my @other_colours = ( '#71C671', # sgi chartreuse
                       '#9C661F', # brick
                     ); # 14
 
-##############
-### Header ###
-##############
-my $html_header = qq{
-<html>
-<head>
-  <title>Variation counts</title>
-</head>
-
-<body>
-
-<div class="ajax initial_panel">
-  <div class="js_panel __h __h_comp_$chart_type" id="$chart_type">
-    <input class="panel_type" type="hidden" value="$chart_type">
-};
-
-
-##############
-### Footer ###
-##############
-my $html_footer = qq{
-     <h4>Number of variants per species and release</h4>
-     <div class="pie_chart_classes" style="width:1050px;height:700px;margin-right:0px;margin-left:50pxborder:1px solid #CCC;border-radius:8px;box-shadow:0 1px 3px #666">
-       <svg id="chartHolder0"></svg>
-    </div>
-  </div>   
-</div>
-</body>
-</html>};
-
 
 ############
 ### Main ###
 ############
 
-my $html_content = '';
+my $json_content = '';
 my @species_list;
 my %species_data;
 my %species_list;
@@ -211,17 +166,14 @@ for (my $version=$oldest_version; $version <= $newest_version; $version++) {
 }
 
 my @colours;
-my $max_value = 0;
 my $chart_values;
 my @data_values;
 my $c_count = 0;
 foreach my $sp (sort keys(%species_list)) {
   my @values;
   for (my $version=$oldest_version; $version <= $newest_version; $version++) {
-    my $value = ($species_data{$sp}{$version}) ? $species_data{$sp}{$version} : 'null';
-    my %val = ('x' => int($version), 'y' => int($value));
-    $max_value = $value if ($max_value < $value);
-    push(@values, \%val);
+    my $value = ($species_data{$sp}{$version} || $species_data{$sp}{$version} == 0) ? $species_data{$sp}{$version} : 'null';
+    push(@values, $value);
   }
   
   # Colours
@@ -233,23 +185,17 @@ foreach my $sp (sort keys(%species_list)) {
     $colour = $other_colours[$c_count];
     $c_count++;
   }
-  my %category = ("key" => $sp, "color" => $colour ,"values" => \@values);
+  my %category = ("spe" => $sp, "color" => $colour ,"var_counts" => \@values);
   push @data_values, \%category;
 }
 
 my $json_info = to_json(\@data_values);
 
 
-
-my $html  = qq{<input type="hidden" class="chart_data" value='[$json_info]' />\n};
-   $html .= qq{<input type="hidden" class="max_data" value="$max_value" />\n};
-
 ## HTML/output file ##
-open  HTML, "> $html_file" or die "Can't open $html_file : $!";
-print HTML $html_header."\n";
-print HTML $html."\n";
-print HTML $html_footer."\n";
-close(HTML);
+open  JSON, "> $json_file" or die "Can't open $json_file : $!";
+print JSON qq{{"release_start":$oldest_version,"release_end":$newest_version,"counts":$json_info}};
+close(JSON);
 
 
 # Connects and execute a query
@@ -289,8 +235,6 @@ sub usage {
     -logins      Login names to the databases (Required)
     -site        The URL of the website (optional)
     -etype       The type of Ensembl, e.g. Plant (optional)
-    -type        The type of chart. By default the value is 'line' chart.
-                 The available list of chart type are: 'line', 'focus' (zoomable line chart), 'stacked' (stacked bar chart)
   } . "\n";
   exit(0);
 }
